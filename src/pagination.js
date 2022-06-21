@@ -23,14 +23,29 @@ module.exports = function (list) {
       innerWindow = options.innerWindow || 2,
       left = options.left || options.outerWindow || 0,
       right = options.right || options.outerWindow || 0
-
     right = pages - right
     pagingList.clear()
+    if(options.navigation && currentPage > 1){
+      item = pagingList.add({
+        page: '<<',
+        dotted: true,
+      })[0]
+      item.elm.firstChild.setAttribute('data-i', 1)
+      item.elm.firstChild.setAttribute('data-page', page)
+
+      item = pagingList.add({
+        page: '<',
+        dotted: true,
+      })[0]
+      item.elm.firstChild.setAttribute('data-i', currentPage-1)
+      item.elm.firstChild.setAttribute('data-page', page)
+    }
+
     for (var i = 1; i <= pages; i++) {
       var className = currentPage === i ? 'active' : ''
 
       //console.log(i, left, right, currentPage, (currentPage - innerWindow), (currentPage + innerWindow), className);
-
+      
       if (is.number(i, left, right, currentPage, innerWindow)) {
         item = pagingList.add({
           page: i,
@@ -41,7 +56,7 @@ module.exports = function (list) {
         }
         item.elm.firstChild.setAttribute('data-i', i)
         item.elm.firstChild.setAttribute('data-page', page)
-      } else if (is.dotted(pagingList, i, left, right, currentPage, innerWindow, pagingList.size())) {
+      } else if (is.dotted(pagingList, i, left, right, currentPage, innerWindow, pagingList.size()) && !options.navigation) {
         item = pagingList.add({
           page: '...',
           dotted: true,
@@ -49,6 +64,22 @@ module.exports = function (list) {
         classes(item.elm).add('disabled')
       }
     }
+    if(options.navigation && currentPage < pages){
+      item = pagingList.add({
+        page: '>',
+        dotted: true,
+      })[0]
+      item.elm.firstChild.setAttribute('data-i', currentPage+1)
+      item.elm.firstChild.setAttribute('data-page', page)
+
+      item = pagingList.add({
+        page: '>>',
+        dotted: true,
+      })[0]
+      item.elm.firstChild.setAttribute('data-i', pages)
+      item.elm.firstChild.setAttribute('data-page', page)
+    }
+
   }
 
   var is = {
@@ -83,6 +114,7 @@ module.exports = function (list) {
   }
 
   return function (options) {
+    
     var pagingList = new List(list.listContainer.id, {
       listClass: options.paginationClass || 'pagination',
       item: options.item || "<li><a class='page' href='#'></a></li>",
@@ -90,7 +122,7 @@ module.exports = function (list) {
       searchClass: 'pagination-search-that-is-not-supposed-to-exist',
       sortClass: 'pagination-sort-that-is-not-supposed-to-exist',
     })
-
+    
     events.bind(pagingList.listContainer, 'click', function (e) {
       var target = e.target || e.srcElement,
         page = list.utils.getAttribute(target, 'data-page'),
@@ -104,5 +136,7 @@ module.exports = function (list) {
       refresh(pagingList, options)
     })
     refresh(pagingList, options)
+
+    
   }
 }
