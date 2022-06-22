@@ -147,7 +147,8 @@ module.exports = function (list) {
           var newlist = Array.from(document.querySelector("."+e.target.className).children)
           target = newlist[parseInt(e.target.value)-1]
           
-          getSelected()
+          if(options.select)
+            getSelected()
         }else{
           target = e.target || e.srcElement
         }
@@ -161,7 +162,8 @@ module.exports = function (list) {
 
     list.on('updated', function () {
       refresh(pagingList, options)
-      getSelected()
+      if(options.select)
+        getSelected()
     })
     refresh(pagingList, options)
   }
