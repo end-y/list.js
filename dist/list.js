@@ -496,6 +496,8 @@ module.exports = function (list) {
 /***/ 664:
 /***/ (function(module, __unused_webpack_exports, __webpack_require__) {
 
+function _typeof(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
+
 var classes = __webpack_require__(700),
     events = __webpack_require__(95),
     List = __webpack_require__(352);
@@ -521,22 +523,23 @@ module.exports = function (list) {
         innerWindow = options.innerWindow || 2,
         left = options.left || options.outerWindow || 0,
         right = options.right || options.outerWindow || 0;
-    right = pages - right;
+    right = options.select ? 0 : pages - right;
     pagingList.clear();
+    var buttons = _typeof(options.navigation) == "object" ? options.navigation.buttonItems || [] : [];
 
     if (options.navigation && currentPage > 1) {
       item = pagingList.add({
-        page: '<<',
+        page: buttons[0] || '<<',
         dotted: true
       })[0];
-      item.elm.firstChild.setAttribute('data-i', 1);
-      item.elm.firstChild.setAttribute('data-page', page);
+      item.elm.querySelector(stringToHtml(buttons[0]).tagName || "a").setAttribute('data-i', 1);
+      item.elm.querySelector(stringToHtml(buttons[0]).tagName || "a").setAttribute('data-page', page);
       item = pagingList.add({
-        page: '<',
+        page: buttons[1] || '<',
         dotted: true
       })[0];
-      item.elm.firstChild.setAttribute('data-i', currentPage - 1);
-      item.elm.firstChild.setAttribute('data-page', page);
+      item.elm.querySelector(stringToHtml(buttons[1]).tagName || "a").setAttribute('data-i', currentPage - 1);
+      item.elm.querySelector(stringToHtml(buttons[1]).tagName || "a").setAttribute('data-page', page);
     }
 
     for (var i = 1; i <= pages; i++) {
@@ -552,8 +555,16 @@ module.exports = function (list) {
           classes(item.elm).add(className);
         }
 
-        item.elm.firstChild.setAttribute('data-i', i);
-        item.elm.firstChild.setAttribute('data-page', page);
+        if (options.select) {
+          item.elm.classList.add("select" + i);
+          item.elm.setAttribute("value", i);
+          item.elm.setAttribute('data-i', i);
+          item.elm.setAttribute('data-page', page);
+          item.elm.innerText = i;
+        } else {
+          item.elm.firstChild.setAttribute('data-i', i);
+          item.elm.firstChild.setAttribute('data-page', page);
+        }
       } else if (is.dotted(pagingList, i, left, right, currentPage, innerWindow, pagingList.size()) && !options.navigation) {
         item = pagingList.add({
           page: '...',
@@ -565,19 +576,31 @@ module.exports = function (list) {
 
     if (options.navigation && currentPage < pages) {
       item = pagingList.add({
-        page: '>',
+        page: buttons[2] || '>',
         dotted: true
       })[0];
-      item.elm.firstChild.setAttribute('data-i', currentPage + 1);
-      item.elm.firstChild.setAttribute('data-page', page);
+      item.elm.querySelector(stringToHtml(buttons[3]).tagName || "a").setAttribute('data-i', currentPage + 1);
+      item.elm.querySelector(stringToHtml(buttons[3]).tagName || "a").setAttribute('data-page', page);
       item = pagingList.add({
-        page: '>>',
+        page: buttons[3] || '>>',
         dotted: true
       })[0];
-      console.log(pages);
-      item.elm.firstChild.setAttribute('data-i', pages);
-      item.elm.firstChild.setAttribute('data-page', page);
+      item.elm.querySelector(stringToHtml(buttons[3]).tagName || "a").setAttribute('data-i', pages);
+      item.elm.querySelector(stringToHtml(buttons[3]).tagName || "a").setAttribute('data-page', page);
     }
+  };
+
+  var stringToHtml = function stringToHtml(str) {
+    var parser = new DOMParser();
+    if (str) return parser.parseFromString(str, "text/html").querySelector("body").firstChild;
+    return false;
+  };
+
+  var getSelected = function getSelected() {
+    var el = Array.from(document.querySelectorAll(".page")).find(function (e) {
+      return Array.from(e.classList).includes("active");
+    });
+    el.setAttribute("selected", true);
   };
 
   var is = {
@@ -610,14 +633,24 @@ module.exports = function (list) {
   return function (options) {
     var pagingList = new List(list.listContainer.id, {
       listClass: options.paginationClass || 'pagination',
-      item: options.item || "<li><a class='page' href='#'></a></li>",
+      item: options.select ? "<option class='page'></option>" : options.item || "<li><a class='page' href='#'></a></li>",
       valueNames: ['page', 'dotted'],
       searchClass: 'pagination-search-that-is-not-supposed-to-exist',
       sortClass: 'pagination-sort-that-is-not-supposed-to-exist'
     });
-    events.bind(pagingList.listContainer, 'click', function (e) {
-      var target = e.target || e.srcElement,
-          page = list.utils.getAttribute(target, 'data-page'),
+    var event = options.select ? "change" : "click";
+    events.bind(pagingList.listContainer, event, function (e) {
+      var target;
+
+      if (event == "change") {
+        var newlist = Array.from(document.querySelector("." + e.target.className).children);
+        target = newlist[parseInt(e.target.value) - 1];
+        getSelected();
+      } else {
+        target = e.target || e.srcElement;
+      }
+
+      var page = list.utils.getAttribute(target, 'data-page'),
           i = list.utils.getAttribute(target, 'data-i');
 
       if (i) {
@@ -626,6 +659,7 @@ module.exports = function (list) {
     });
     list.on('updated', function () {
       refresh(pagingList, options);
+      getSelected();
     });
     refresh(pagingList, options);
   };
